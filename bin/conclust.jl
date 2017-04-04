@@ -9,7 +9,7 @@ using Bio.Seq
 using Clustering
 using Distances
 using Gadfly
-using GaussianMixtures
+using MultivariateStats
 using Cairo
 using Fontconfig
 using ArgParse
@@ -78,14 +78,16 @@ for s in open(FASTAReader{ReferenceSequence}, fastafilepath)
     outmatrix = [outmatrix; result']
 end
 
-println("PROGRESS: Calculating distance matrix (Euclidean).")
+println("PROGRESS: Calculating distance matrix.")
 
-R = pairwise(Euclidean(), outmatrix')
+R = pairwise(CorrDist(), outmatrix')
+
+Rmds = classical_mds(R, 2)
 
 println("PROGRESS: Clustering by distance.")
 
 kmatrix = Matrix{Int64}(0, 2)
-for i in 5:5:100
+for i in 5:5:80
     Rk = kmeans(outmatrix', i; maxiter=200)
     println(Rk.totalcost)
     karray = [i,Rk.totalcost]
@@ -95,9 +97,13 @@ end
 
 println("PROGRESS: Drawing plot.")
 
-draw(PNG(fileout, 6inch, 3inch), plot(x = kmatrix[:, 1], y = kmatrix[:, 2], Geom.point, Geom.line))
+draw(PDF("test1.pdf", 6inch, 6inch), plot(x = Rmds[1, :], y = Rmds[2, :], Geom.point))
 
-Rfinal = kmeans(outmatrix', 40; maxiter=200)
+draw(PDF("test2.pdf", 6inch, 6inch), plot(x = kmatrix[:, 1], y = kmatrix[:, 2], Geom.point, Geom.line))
+
+Rfinal = kmeans(outmatrix', 50; maxiter=200)
+
+draw(PDF("test3.pdf", 10inch, 10inch), plot(x = Rmds[1, :], y = Rmds[2, :], color = Rfinal.assignments, Geom.point))
 
 println(Rfinal.counts)
 
